@@ -24,7 +24,7 @@ interface RequestState {
   fetchRequests: () => Promise<void>;
   fetchRequestById: (id: string) => Promise<void>;
   createRequest: (data: CreateRequestData) => Promise<ServiceRequest>;
-  updateRequestStatus: (requestId: string, status: RequestStatus, note?: string) => Promise<void>;
+  updateRequestStatus: (requestId: string, status: RequestStatus, note?: string, price?: number) => Promise<void>;
   addMessage: (requestId: string, content: string, attachments?: any[]) => Promise<void>;
   setSelectedRequest: (request: ServiceRequest | null) => void;
 }
@@ -38,21 +38,42 @@ export const useRequestStore = create<RequestState>((set, get) => ({
     set({ isLoading: true });
     try {
       // TODO: GET /requests
-      const requests = await apiClient.get<ServiceRequest[]>(API_ENDPOINTS.REQUESTS);
+      const requests = await apiClient.get<any[]>(API_ENDPOINTS.REQUESTS);
 
-      // Convert date strings to Date objects
-      const parsedRequests = requests.map((request) => ({
-        ...request,
-        createdAt: new Date(request.createdAt),
-        updatedAt: new Date(request.updatedAt),
-        messages: request.messages.map((msg) => ({
-          ...msg,
-          timestamp: new Date(msg.timestamp),
-        })),
-        timeline: request.timeline.map((t) => ({
-          ...t,
-          timestamp: new Date(t.timestamp),
-        })),
+      // Transform backend data to frontend format
+      const parsedRequests: ServiceRequest[] = requests.map((req) => ({
+        id: req.id,
+        requestNumber: req.id.substring(0, 8).toUpperCase(), // İlk 8 karakter UUID'den
+        customerId: req.customerId,
+        customerName: req.customer?.name || "Kullanıcı",
+        customerPhone: req.customer?.phone,
+        customerEmail: req.customer?.email,
+        businessId: req.businessId || req.business?.id || "",
+        businessName: req.business?.businessName || "Atölye",
+        shopId: req.businessId || req.business?.id || "",
+        shopName: req.business?.businessName || "Atölye",
+        vehicle: req.vehicle || { brand: "", model: "", year: "" },
+        issueDescription: req.description || "",
+        selectedIssues: req.category ? [req.category] : [],
+        status: req.status,
+        createdAt: new Date(req.createdAt),
+        updatedAt: new Date(req.updatedAt),
+        estimatedPrice: req.price?.toString(),
+        actualPrice: req.price?.toString(),
+        price: req.price,
+        rating: req.rating,
+        comment: req.comment,
+        messages:
+          req.messages?.map((msg: any) => ({
+            ...msg,
+            timestamp: new Date(msg.timestamp),
+          })) || [],
+        timeline:
+          req.statusHistory?.map((t: any) => ({
+            status: t.status,
+            timestamp: new Date(t.timestamp),
+            note: t.note,
+          })) || [],
       }));
 
       set({ requests: parsedRequests, isLoading: false });
@@ -67,21 +88,42 @@ export const useRequestStore = create<RequestState>((set, get) => ({
     set({ isLoading: true });
     try {
       // TODO: GET /requests/:id
-      const request = await apiClient.get<ServiceRequest>(API_ENDPOINTS.REQUEST_BY_ID(id));
+      const req = await apiClient.get<any>(API_ENDPOINTS.REQUEST_BY_ID(id));
 
-      // Convert date strings to Date objects
-      const parsedRequest = {
-        ...request,
-        createdAt: new Date(request.createdAt),
-        updatedAt: new Date(request.updatedAt),
-        messages: request.messages.map((msg) => ({
-          ...msg,
-          timestamp: new Date(msg.timestamp),
-        })),
-        timeline: request.timeline.map((t) => ({
-          ...t,
-          timestamp: new Date(t.timestamp),
-        })),
+      // Transform backend data to frontend format
+      const parsedRequest: ServiceRequest = {
+        id: req.id,
+        requestNumber: req.id.substring(0, 8).toUpperCase(),
+        customerId: req.customerId,
+        customerName: req.customer?.name || "Kullanıcı",
+        customerPhone: req.customer?.phone,
+        customerEmail: req.customer?.email,
+        businessId: req.businessId || req.business?.id || "",
+        businessName: req.business?.businessName || "Atölye",
+        shopId: req.businessId || req.business?.id || "",
+        shopName: req.business?.businessName || "Atölye",
+        vehicle: req.vehicle || { brand: "", model: "", year: "" },
+        issueDescription: req.description || "",
+        selectedIssues: req.category ? [req.category] : [],
+        status: req.status,
+        createdAt: new Date(req.createdAt),
+        updatedAt: new Date(req.updatedAt),
+        estimatedPrice: req.price?.toString(),
+        actualPrice: req.price?.toString(),
+        price: req.price,
+        rating: req.rating,
+        comment: req.comment,
+        messages:
+          req.messages?.map((msg: any) => ({
+            ...msg,
+            timestamp: new Date(msg.timestamp),
+          })) || [],
+        timeline:
+          req.statusHistory?.map((t: any) => ({
+            status: t.status,
+            timestamp: new Date(t.timestamp),
+            note: t.note,
+          })) || [],
       };
 
       set({ selectedRequest: parsedRequest, isLoading: false });
@@ -96,21 +138,26 @@ export const useRequestStore = create<RequestState>((set, get) => ({
     set({ isLoading: true });
     try {
       // TODO: POST /requests
-      const request = await apiClient.post<ServiceRequest>(API_ENDPOINTS.CREATE_REQUEST, data);
+      const req = await apiClient.post<any>(API_ENDPOINTS.CREATE_REQUEST, data);
 
-      // Parse dates
-      const parsedRequest = {
-        ...request,
-        createdAt: new Date(request.createdAt),
-        updatedAt: new Date(request.updatedAt),
-        messages: request.messages.map((msg) => ({
-          ...msg,
-          timestamp: new Date(msg.timestamp),
-        })),
-        timeline: request.timeline.map((t) => ({
-          ...t,
-          timestamp: new Date(t.timestamp),
-        })),
+      // Transform backend data to frontend format
+      const parsedRequest: ServiceRequest = {
+        id: req.id,
+        requestNumber: req.id.substring(0, 8).toUpperCase(),
+        customerId: req.customerId,
+        customerName: "Kullanıcı",
+        businessId: req.businessId || "",
+        businessName: "Atölye",
+        shopId: req.businessId || "",
+        shopName: "Atölye",
+        vehicle: req.vehicle || data.vehicle,
+        issueDescription: req.description || data.issueDescription,
+        selectedIssues: data.selectedIssues || [],
+        status: req.status,
+        createdAt: new Date(req.createdAt),
+        updatedAt: new Date(req.updatedAt),
+        messages: [],
+        timeline: [],
       };
 
       set((state) => ({
@@ -126,10 +173,14 @@ export const useRequestStore = create<RequestState>((set, get) => ({
     }
   },
 
-  updateRequestStatus: async (requestId: string, status: RequestStatus, note?: string) => {
+  updateRequestStatus: async (requestId: string, status: RequestStatus, note?: string, price?: number) => {
     try {
-      // TODO: PATCH /requests/:id/status
-      await apiClient.patch(API_ENDPOINTS.UPDATE_REQUEST_STATUS(requestId), { status, note });
+      // PATCH /requests/:id/status
+      const payload: any = { status, note };
+      if (price !== undefined) {
+        payload.price = price;
+      }
+      await apiClient.patch(API_ENDPOINTS.UPDATE_REQUEST_STATUS(requestId), payload);
 
       // Refetch requests to get updated data
       await get().fetchRequests();

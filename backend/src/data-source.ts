@@ -8,7 +8,7 @@ export const AppDataSource = new DataSource({
   password: process.env.DB_PASSWORD || "mypassword",
   database: process.env.DB_NAME || "tamirse_db",
   synchronize: true,
-  logging: true,
+  logging: false,
   entities: [__dirname + "/**/*.entity{.ts,.js}"],
   migrations: ["src/migration/**/*.ts"],
   subscribers: ["src/subscriber/**/*.ts"],

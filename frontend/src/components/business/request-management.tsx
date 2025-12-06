@@ -8,10 +8,19 @@ import { Label } from "../ui/label";
 import { Badge } from "../ui/badge";
 import { Separator } from "../ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
-import { 
-  Car, User, Phone, Mail, Calendar, FileText,
-  Send, Paperclip, Image as ImageIcon, Download,
-  CheckCircle2, XCircle
+import {
+  Car,
+  User,
+  Phone,
+  Mail,
+  Calendar,
+  FileText,
+  Send,
+  Paperclip,
+  Image as ImageIcon,
+  Download,
+  CheckCircle2,
+  XCircle,
 } from "lucide-react";
 import { toast } from "sonner@2.0.3";
 
@@ -19,22 +28,16 @@ interface RequestManagementProps {
   request: ServiceRequest | null;
   open: boolean;
   onClose: () => void;
-  onUpdateStatus: (requestId: string, status: RequestStatus, note?: string) => void;
+  onUpdateStatus: (requestId: string, status: RequestStatus, note?: string, price?: number) => void;
   onSendMessage: (requestId: string, content: string, attachments?: File[]) => void;
 }
 
-export function RequestManagement({ 
-  request, 
-  open, 
-  onClose,
-  onUpdateStatus,
-  onSendMessage
-}: RequestManagementProps) {
+export function RequestManagement({ request, open, onClose, onUpdateStatus, onSendMessage }: RequestManagementProps) {
   const [newMessage, setNewMessage] = useState("");
   const [newStatus, setNewStatus] = useState<RequestStatus | "">("");
   const [statusNote, setStatusNote] = useState("");
-  const [estimatedPrice, setEstimatedPrice] = useState("");
-  const [actualPrice, setActualPrice] = useState("");
+  const [estimatedPrice, setEstimatedPrice] = useState(request?.estimatedPrice || "");
+  const [actualPrice, setActualPrice] = useState(request?.actualPrice || request?.price?.toString() || "");
 
   if (!request) return null;
 
@@ -53,10 +56,42 @@ export function RequestManagement({
       toast.error("Lütfen bir durum seçin");
       return;
     }
-    onUpdateStatus(request.id, newStatus as RequestStatus, statusNote);
+
+    // Parse price if provided and status is completed
+    let priceValue: number | undefined;
+    if (newStatus === "completed" && actualPrice) {
+      // Remove currency symbol and parse
+      const cleanPrice = actualPrice.replace(/[^0-9.]/g, "");
+      priceValue = parseFloat(cleanPrice);
+      if (isNaN(priceValue)) {
+        toast.error("Geçerli bir fiyat girin");
+        return;
+      }
+    }
+
+    onUpdateStatus(request.id, newStatus as RequestStatus, statusNote, priceValue);
     toast.success("Durum güncellendi");
     setNewStatus("");
     setStatusNote("");
+  };
+
+  const handleSavePrice = () => {
+    if (!actualPrice) {
+      toast.error("Lütfen net tutarı girin");
+      return;
+    }
+
+    // Remove currency symbol and parse
+    const cleanPrice = actualPrice.replace(/[^0-9.]/g, "");
+    const priceValue = parseFloat(cleanPrice);
+    if (isNaN(priceValue)) {
+      toast.error("Geçerli bir fiyat girin");
+      return;
+    }
+
+    // Update the request with the price
+    onUpdateStatus(request.id, request.status, "Fiyat güncellendi", priceValue);
+    toast.success("Fiyat kaydedildi");
   };
 
   const handleApprove = () => {
@@ -88,9 +123,7 @@ export function RequestManagement({
         <div className="p-6 border-b border-border bg-muted/30">
           <div className="flex items-start justify-between mb-4">
             <div>
-              <DialogTitle className="text-2xl mb-2">
-                Talep #{request.requestNumber}
-              </DialogTitle>
+              <DialogTitle className="text-2xl mb-2">Talep #{request.requestNumber}</DialogTitle>
               <div className="flex items-center gap-2">
                 <Badge variant="outline" className="border-2">
                   <div className={`w-2 h-2 ${currentStatusConfig.color} rounded-full mr-2`} />
@@ -106,19 +139,14 @@ export function RequestManagement({
           {/* Quick Actions for Pending */}
           {request.status === "pending" && (
             <div className="flex gap-2">
-              <Button
-                variant="default"
-                className="gap-2"
-                onClick={handleApprove}
-              >
+              <Button variant="default" className="gap-2" onClick={handleApprove}>
                 <CheckCircle2 className="w-4 h-4" />
                 Onayla
               </Button>
               <Button
                 variant="outline"
                 className="gap-2 hover:bg-destructive hover:text-destructive-foreground"
-                onClick={handleReject}
-              >
+                onClick={handleReject}>
                 <XCircle className="w-4 h-4" />
                 Reddet
               </Button>
@@ -143,18 +171,25 @@ export function RequestManagement({
                     <p className="font-medium">{request.customerName}</p>
                   </div>
                   <Separator />
-                  <div className="flex items-center gap-2">
-                    <Phone className="w-4 h-4 text-muted-foreground" />
-                    <a href="tel:+905551234567" className="text-sm hover:text-primary">
-                      +90 555 123 45 67
-                    </a>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Mail className="w-4 h-4 text-muted-foreground" />
-                    <a href="mailto:customer@example.com" className="text-sm hover:text-primary">
-                      customer@example.com
-                    </a>
-                  </div>
+                  {request.customerPhone && (
+                    <div className="flex items-center gap-2">
+                      <Phone className="w-4 h-4 text-muted-foreground" />
+                      <a href={`tel:${request.customerPhone}`} className="text-sm hover:text-primary">
+                        {request.customerPhone}
+                      </a>
+                    </div>
+                  )}
+                  {request.customerEmail && (
+                    <div className="flex items-center gap-2">
+                      <Mail className="w-4 h-4 text-muted-foreground" />
+                      <a href={`mailto:${request.customerEmail}`} className="text-sm hover:text-primary">
+                        {request.customerEmail}
+                      </a>
+                    </div>
+                  )}
+                  {!request.customerPhone && !request.customerEmail && (
+                    <p className="text-sm text-muted-foreground">İletişim bilgisi bulunmuyor</p>
+                  )}
                 </div>
               </div>
 
@@ -204,9 +239,7 @@ export function RequestManagement({
                   </div>
                 )}
                 <div className="p-4 bg-muted/30 rounded-lg">
-                  <p className="text-sm whitespace-pre-wrap">
-                    {request.issueDescription}
-                  </p>
+                  <p className="text-sm whitespace-pre-wrap">{request.issueDescription}</p>
                 </div>
               </div>
 
@@ -233,9 +266,13 @@ export function RequestManagement({
                       value={actualPrice}
                       onChange={(e) => setActualPrice(e.target.value)}
                     />
+                    <p className="text-xs text-muted-foreground">
+                      Mevcut: {request.price ? `₺${request.price.toLocaleString("tr-TR")}` : "Belirtilmedi"}
+                    </p>
                   </div>
-                  <Button variant="outline" className="w-full">
-                    Fatura Oluştur
+                  <Button variant="default" className="w-full" onClick={handleSavePrice}>
+                    <FileText className="w-4 h-4 mr-2" />
+                    Fiyatı Kaydet
                   </Button>
                 </div>
               </div>
@@ -273,11 +310,16 @@ export function RequestManagement({
                     />
                   </div>
 
-                  <Button
-                    className="w-full"
-                    onClick={handleUpdateStatus}
-                    disabled={!newStatus}
-                  >
+                  {newStatus === "completed" && (
+                    <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                      <p className="text-sm text-blue-700">
+                        ℹ️ Tamamlandı olarak işaretlemeden önce yukarıdan "Net Tutar"ı girip "Fiyatı Kaydet" butonuna
+                        basın.
+                      </p>
+                    </div>
+                  )}
+
+                  <Button onClick={handleUpdateStatus} className="w-full">
                     Durumu Güncelle
                   </Button>
                 </div>
@@ -292,24 +334,16 @@ export function RequestManagement({
                 {/* Message History */}
                 <div className="space-y-3 max-h-64 overflow-y-auto">
                   {request.messages.length === 0 ? (
-                    <p className="text-sm text-muted-foreground text-center py-4">
-                      Henüz mesaj bulunmuyor
-                    </p>
+                    <p className="text-sm text-muted-foreground text-center py-4">Henüz mesaj bulunmuyor</p>
                   ) : (
                     request.messages.map((message) => (
                       <div
                         key={message.id}
-                        className={`flex ${
-                          message.sender === "business" ? "justify-end" : "justify-start"
-                        }`}
-                      >
+                        className={`flex ${message.sender === "business" ? "justify-end" : "justify-start"}`}>
                         <div
                           className={`max-w-[85%] ${
-                            message.sender === "business"
-                              ? "bg-primary text-primary-foreground"
-                              : "bg-muted"
-                          } rounded-lg p-3`}
-                        >
+                            message.sender === "business" ? "bg-primary text-primary-foreground" : "bg-muted"
+                          } rounded-lg p-3`}>
                           <div className="flex items-center gap-2 mb-1">
                             <span className="text-xs font-medium opacity-70">
                               {message.sender === "business" ? "Siz" : request.customerName}
@@ -329,11 +363,8 @@ export function RequestManagement({
                                 <div
                                   key={idx}
                                   className={`flex items-center gap-2 p-2 rounded text-xs ${
-                                    message.sender === "business"
-                                      ? "bg-primary-foreground/10"
-                                      : "bg-background"
-                                  }`}
-                                >
+                                    message.sender === "business" ? "bg-primary-foreground/10" : "bg-background"
+                                  }`}>
                                   {attachment.type === "image" ? (
                                     <ImageIcon className="w-3 h-3" />
                                   ) : (

@@ -157,7 +157,7 @@ export class Auth {
   me = async (req: any, res: any) => {
     try {
       // req.user middleware tarafından ekleniyor
-      const userId = req.user?.userId;
+      const userId = req.user?.id;
 
       if (!userId) {
         return res.status(401).json({ message: "Unauthorized" });

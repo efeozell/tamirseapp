@@ -5,6 +5,7 @@ const redisClient = createClient({
   socket: {
     reconnectStrategy: false,
   },
+  password: ENV.REDIS_PASSWORD || undefined,
 });
 
 // Sessiz mod - sadece successful bağlantıda mesaj göster
@@ -20,6 +21,7 @@ export const connectRedis = async () => {
     await redisClient.connect();
   } catch (error) {
     throw error;
+    console.log(`Error in redis connection ${error}`);
   }
 };
 

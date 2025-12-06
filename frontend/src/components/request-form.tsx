@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
@@ -56,6 +56,14 @@ export function RequestForm({ open, onClose, preSelectedShop }: RequestFormProps
     shopId: preSelectedShop?.id || "",
   });
 
+  // Update shopId when preSelectedShop changes
+  useEffect(() => {
+    setFormData((prev) => ({
+      ...prev,
+      shopId: preSelectedShop?.id || "",
+    }));
+  }, [preSelectedShop?.id]);
+
   const totalSteps = 3;
   const progress = (step / totalSteps) * 100;
 
@@ -74,8 +82,13 @@ export function RequestForm({ open, onClose, preSelectedShop }: RequestFormProps
   const { createRequest, isLoading } = useRequestStore();
 
   const handleSubmit = async () => {
+    // Validate shop selection
+    if (!formData.shopId || formData.shopId.trim() === "") {
+      toast.error("Lütfen bir atölye seçin");
+      return;
+    }
+
     try {
-      // TODO: POST /requests - Create new service request
       await createRequest({
         shopId: formData.shopId,
         vehicle: {
@@ -290,19 +303,30 @@ export function RequestForm({ open, onClose, preSelectedShop }: RequestFormProps
                   <p className="text-sm">{formData.issueDescription}</p>
                 </div>
 
-                {preSelectedShop && (
-                  <div>
-                    <p className="text-sm text-muted-foreground">Atölye</p>
+                <div>
+                  <p className="text-sm text-muted-foreground">Atölye</p>
+                  {preSelectedShop ? (
                     <p className="font-medium">{preSelectedShop.name}</p>
-                  </div>
-                )}
+                  ) : (
+                    <p className="text-sm text-red-600">⚠️ Atölye seçilmedi</p>
+                  )}
+                </div>
               </div>
 
-              <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                <p className="text-sm text-blue-900">
-                  ℹ️ Talebiniz gönderildikten sonra, seçili atölye size en kısa sürede geri dönüş yapacaktır.
-                </p>
-              </div>
+              {preSelectedShop ? (
+                <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                  <p className="text-sm text-blue-900">
+                    ℹ️ Talebiniz gönderildikten sonra, seçili atölye size en kısa sürede geri dönüş yapacaktır.
+                  </p>
+                </div>
+              ) : (
+                <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+                  <p className="text-sm text-red-900">
+                    ⚠️ Talep oluşturmak için bir atölye seçmeniz gerekmektedir. Lütfen atölyeler listesinden bir atölye
+                    seçin.
+                  </p>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -326,8 +350,10 @@ export function RequestForm({ open, onClose, preSelectedShop }: RequestFormProps
               <ChevronRight className="w-4 h-4 ml-1" />
             </Button>
           ) : (
-            <Button onClick={handleSubmit} disabled={!isStepValid()}>
-              Talep Gönder
+            <Button
+              onClick={handleSubmit}
+              disabled={!isStepValid() || isLoading || !formData.shopId || formData.shopId.trim() === ""}>
+              {isLoading ? "Gönderiliyor..." : "Talep Gönder"}
             </Button>
           )}
         </div>

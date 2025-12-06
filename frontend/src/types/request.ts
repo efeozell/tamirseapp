@@ -1,9 +1,4 @@
-export type RequestStatus = 
-  | "pending" 
-  | "approved" 
-  | "in_progress" 
-  | "completed" 
-  | "rejected";
+export type RequestStatus = "pending" | "approved" | "in_progress" | "completed" | "rejected";
 
 export interface RequestMessage {
   id: string;
@@ -22,6 +17,10 @@ export interface ServiceRequest {
   requestNumber: string;
   customerId: string;
   customerName: string;
+  customerPhone?: string;
+  customerEmail?: string;
+  businessId: string;
+  businessName: string;
   shopId: string;
   shopName: string;
   vehicle: {
@@ -37,6 +36,9 @@ export interface ServiceRequest {
   updatedAt: Date;
   estimatedPrice?: string;
   actualPrice?: string;
+  price?: number;
+  rating?: number;
+  comment?: string;
   messages: RequestMessage[];
   timeline: {
     status: RequestStatus;

@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { persist } from "zustand/middleware";
 import { apiClient } from "../lib/api-client";
 import { API_ENDPOINTS } from "../lib/api-config";
 
@@ -54,77 +55,88 @@ interface AuthState {
   checkAuth: () => Promise<void>;
 }
 
-export const useAuthStore = create<AuthState>()((set) => ({
-  user: null,
-  isAuthenticated: false,
-  isLoading: false,
+export const useAuthStore = create<AuthState>()(
+  persist(
+    (set) => ({
+      user: null,
+      isAuthenticated: false,
+      isLoading: false,
 
-  login: async (email: string, password: string) => {
-    set({ isLoading: true });
-    try {
-      // POST /auth/login - Cookie-based auth (token in httpOnly cookie)
-      const response = await apiClient.post<{ message: string; user?: User }>(API_ENDPOINTS.LOGIN, {
-        email,
-        password,
-      });
+      login: async (email: string, password: string) => {
+        set({ isLoading: true });
+        try {
+          // POST /auth/login - Cookie-based auth (token in httpOnly cookie)
+          const response = await apiClient.post<{ message: string; user?: User }>(API_ENDPOINTS.LOGIN, {
+            email,
+            password,
+          });
 
-      // Token artık cookie'de, kullanıcı bilgisini al
-      if (response.user) {
-        set({ user: response.user, isAuthenticated: true, isLoading: false });
-      } else {
-        // Kullanıcı bilgisi yoksa /auth/me'den al
-        const user = await apiClient.get<User>(API_ENDPOINTS.ME);
-        set({ user, isAuthenticated: true, isLoading: false });
-      }
-    } catch (error) {
-      set({ isLoading: false });
-      throw error;
+          // Token artık cookie'de, kullanıcı bilgisini al
+          if (response.user) {
+            set({ user: response.user, isAuthenticated: true, isLoading: false });
+          } else {
+            // Kullanıcı bilgisi yoksa /auth/me'den al
+            const user = await apiClient.get<User>(API_ENDPOINTS.ME);
+            set({ user, isAuthenticated: true, isLoading: false });
+          }
+        } catch (error) {
+          set({ isLoading: false });
+          throw error;
+        }
+      },
+
+      signup: async (data) => {
+        set({ isLoading: true });
+        try {
+          // POST /auth/signup - Customer signup (isActive=true)
+          await apiClient.post(API_ENDPOINTS.SIGNUP, data);
+          set({ isLoading: false });
+        } catch (error) {
+          set({ isLoading: false });
+          throw error;
+        }
+      },
+
+      signupBusiness: async (data) => {
+        set({ isLoading: true });
+        try {
+          // POST /auth/signup/business - Business signup (isActive=false, pending approval)
+          await apiClient.post(API_ENDPOINTS.SIGNUP_BUSINESS, data);
+          set({ isLoading: false });
+        } catch (error) {
+          set({ isLoading: false });
+          throw error;
+        }
+      },
+
+      logout: async () => {
+        try {
+          // TODO: POST /auth/logout
+          await apiClient.post(API_ENDPOINTS.LOGOUT);
+        } catch (error) {
+          console.error("Logout error:", error);
+        } finally {
+          set({ user: null, isAuthenticated: false });
+        }
+      },
+
+      checkAuth: async () => {
+        try {
+          // GET /auth/me - Cookie'deki token ile otomatik kontrol
+          const user = await apiClient.get<User>(API_ENDPOINTS.ME);
+          set({ user, isAuthenticated: true });
+        } catch (error) {
+          // Cookie yok veya geçersiz
+          set({ user: null, isAuthenticated: false });
+        }
+      },
+    }),
+    {
+      name: "auth-storage", // localStorage key
+      partialize: (state) => ({
+        user: state.user,
+        isAuthenticated: state.isAuthenticated,
+      }), // Only persist user and isAuthenticated, not isLoading
     }
-  },
-
-  signup: async (data) => {
-    set({ isLoading: true });
-    try {
-      // POST /auth/signup - Customer signup (isActive=true)
-      await apiClient.post(API_ENDPOINTS.SIGNUP, data);
-      set({ isLoading: false });
-    } catch (error) {
-      set({ isLoading: false });
-      throw error;
-    }
-  },
-
-  signupBusiness: async (data) => {
-    set({ isLoading: true });
-    try {
-      // POST /auth/signup/business - Business signup (isActive=false, pending approval)
-      await apiClient.post(API_ENDPOINTS.SIGNUP_BUSINESS, data);
-      set({ isLoading: false });
-    } catch (error) {
-      set({ isLoading: false });
-      throw error;
-    }
-  },
-
-  logout: async () => {
-    try {
-      // TODO: POST /auth/logout
-      await apiClient.post(API_ENDPOINTS.LOGOUT);
-    } catch (error) {
-      console.error("Logout error:", error);
-    } finally {
-      set({ user: null, isAuthenticated: false });
-    }
-  },
-
-  checkAuth: async () => {
-    try {
-      // GET /auth/me - Cookie'deki token ile otomatik kontrol
-      const user = await apiClient.get<User>(API_ENDPOINTS.ME);
-      set({ user, isAuthenticated: true });
-    } catch (error) {
-      // Cookie yok veya geçersiz
-      set({ user: null, isAuthenticated: false });
-    }
-  },
-}));
+  )
+);

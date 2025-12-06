@@ -1,15 +1,26 @@
 import { useState } from "react";
 import { ServiceRequest } from "../../types/request";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "../ui/dialog";
 import { Button } from "../ui/button";
 import { Textarea } from "../ui/textarea";
 import { Badge } from "../ui/badge";
 import { Separator } from "../ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import { RequestTimeline } from "./request-timeline";
-import { 
-  ArrowLeft, Send, Paperclip, Phone, MapPin, Calendar,
-  FileText, Download, Image as ImageIcon, CheckCircle2
+import { RateRequestDialog } from "./rate-request-dialog";
+import { InvoiceDialog } from "./invoice-dialog";
+import {
+  ArrowLeft,
+  Send,
+  Paperclip,
+  Phone,
+  MapPin,
+  Calendar,
+  FileText,
+  Download,
+  Image as ImageIcon,
+  CheckCircle2,
+  Star,
 } from "lucide-react";
 import { toast } from "sonner@2.0.3";
 
@@ -17,10 +28,13 @@ interface RequestDetailProps {
   request: ServiceRequest | null;
   open: boolean;
   onClose: () => void;
+  onRequestUpdated?: () => void;
 }
 
-export function RequestDetail({ request, open, onClose }: RequestDetailProps) {
+export function RequestDetail({ request, open, onClose, onRequestUpdated }: RequestDetailProps) {
   const [newMessage, setNewMessage] = useState("");
+  const [showRatingDialog, setShowRatingDialog] = useState(false);
+  const [showInvoiceDialog, setShowInvoiceDialog] = useState(false);
 
   if (!request) return null;
 
@@ -52,10 +66,8 @@ export function RequestDetail({ request, open, onClose }: RequestDetailProps) {
         <div className="p-6 border-b border-border">
           <div className="flex items-start justify-between">
             <div>
-              <DialogTitle className="text-2xl mb-2">
-                Talep Detayı #{request.requestNumber}
-              </DialogTitle>
-              <p className="text-sm text-muted-foreground">
+              <DialogTitle className="text-2xl mb-2">Talep Detayı #{request.requestNumber}</DialogTitle>
+              <DialogDescription className="text-sm text-muted-foreground">
                 {new Date(request.createdAt).toLocaleDateString("tr-TR", {
                   day: "numeric",
                   month: "long",
@@ -63,7 +75,7 @@ export function RequestDetail({ request, open, onClose }: RequestDetailProps) {
                   hour: "2-digit",
                   minute: "2-digit",
                 })}
-              </p>
+              </DialogDescription>
             </div>
             <Button variant="ghost" size="icon" onClick={onClose}>
               <ArrowLeft className="w-5 h-5" />
@@ -89,22 +101,54 @@ export function RequestDetail({ request, open, onClose }: RequestDetailProps) {
 
             {/* Timeline Tab */}
             <TabsContent value="timeline" className="space-y-6">
-              <RequestTimeline
-                currentStatus={request.status}
-                timeline={request.timeline}
-              />
+              <RequestTimeline currentStatus={request.status} timeline={request.timeline} />
 
               {request.status === "completed" && (
-                <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
-                  <div className="flex items-start gap-3">
-                    <CheckCircle2 className="w-5 h-5 text-green-600 mt-0.5" />
-                    <div>
-                      <h4 className="font-medium text-green-900 mb-1">
-                        İşlem Tamamlandı
-                      </h4>
-                      <p className="text-sm text-green-700">
-                        Talebiniz başarıyla tamamlandı. Hizmet için teşekkür ederiz!
-                      </p>
+                <div className="space-y-3">
+                  <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+                    <div className="flex items-start gap-3">
+                      <CheckCircle2 className="w-5 h-5 text-green-600 mt-0.5" />
+                      <div className="flex-1">
+                        <h4 className="font-medium text-green-900 mb-1">İşlem Tamamlandı</h4>
+                        <p className="text-sm text-green-700 mb-3">
+                          Talebiniz başarıyla tamamlandı. Hizmet için teşekkür ederiz!
+                        </p>
+                        <div className="flex flex-wrap gap-2">
+                          {!request.rating && (
+                            <Button
+                              onClick={() => setShowRatingDialog(true)}
+                              variant="default"
+                              size="sm"
+                              className="bg-green-600 hover:bg-green-700">
+                              <Star className="w-4 h-4 mr-2" />
+                              Hizmeti Değerlendir
+                            </Button>
+                          )}
+                          {request.rating && (
+                            <div className="flex items-center gap-2">
+                              <div className="flex">
+                                {[1, 2, 3, 4, 5].map((star) => (
+                                  <Star
+                                    key={star}
+                                    className={`w-4 h-4 ${
+                                      star <= request.rating! ? "fill-yellow-400 text-yellow-400" : "text-gray-300"
+                                    }`}
+                                  />
+                                ))}
+                              </div>
+                              <span className="text-sm text-green-700">Değerlendirmeniz kaydedildi</span>
+                            </div>
+                          )}
+                          <Button
+                            onClick={() => setShowInvoiceDialog(true)}
+                            variant="outline"
+                            size="sm"
+                            className="border-green-600 text-green-700 hover:bg-green-50">
+                            <FileText className="w-4 h-4 mr-2" />
+                            Fatura Görüntüle
+                          </Button>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -123,17 +167,11 @@ export function RequestDetail({ request, open, onClose }: RequestDetailProps) {
                   {request.messages.map((message) => (
                     <div
                       key={message.id}
-                      className={`flex ${
-                        message.sender === "customer" ? "justify-end" : "justify-start"
-                      }`}
-                    >
+                      className={`flex ${message.sender === "customer" ? "justify-end" : "justify-start"}`}>
                       <div
                         className={`max-w-[80%] ${
-                          message.sender === "customer"
-                            ? "bg-primary text-primary-foreground"
-                            : "bg-muted"
-                        } rounded-lg p-4`}
-                      >
+                          message.sender === "customer" ? "bg-primary text-primary-foreground" : "bg-muted"
+                        } rounded-lg p-4`}>
                         <div className="flex items-center gap-2 mb-2">
                           <span className="text-xs font-medium opacity-70">
                             {message.sender === "customer" ? "Siz" : request.shopName}
@@ -153,22 +191,15 @@ export function RequestDetail({ request, open, onClose }: RequestDetailProps) {
                               <div
                                 key={idx}
                                 className={`flex items-center gap-2 p-2 rounded ${
-                                  message.sender === "customer"
-                                    ? "bg-primary-foreground/10"
-                                    : "bg-background"
-                                }`}
-                              >
+                                  message.sender === "customer" ? "bg-primary-foreground/10" : "bg-background"
+                                }`}>
                                 {attachment.type === "image" ? (
                                   <ImageIcon className="w-4 h-4" />
                                 ) : (
                                   <FileText className="w-4 h-4" />
                                 )}
                                 <span className="text-xs flex-1">{attachment.name}</span>
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  className="h-6 w-6 p-0"
-                                >
+                                <Button size="sm" variant="ghost" className="h-6 w-6 p-0">
                                   <Download className="w-3 h-3" />
                                 </Button>
                               </div>
@@ -194,11 +225,7 @@ export function RequestDetail({ request, open, onClose }: RequestDetailProps) {
                     className="resize-none"
                     rows={2}
                   />
-                  <Button
-                    size="icon"
-                    className="shrink-0"
-                    onClick={handleSendMessage}
-                  >
+                  <Button size="icon" className="shrink-0" onClick={handleSendMessage}>
                     <Send className="w-4 h-4" />
                   </Button>
                 </div>
@@ -273,9 +300,7 @@ export function RequestDetail({ request, open, onClose }: RequestDetailProps) {
                   <div className="p-4 bg-muted/30 rounded-lg space-y-2">
                     {request.estimatedPrice && (
                       <div className="flex justify-between">
-                        <span className="text-sm text-muted-foreground">
-                          Tahmini Tutar
-                        </span>
+                        <span className="text-sm text-muted-foreground">Tahmini Tutar</span>
                         <span className="font-medium">{request.estimatedPrice}</span>
                       </div>
                     )}
@@ -283,12 +308,8 @@ export function RequestDetail({ request, open, onClose }: RequestDetailProps) {
                       <>
                         <Separator />
                         <div className="flex justify-between">
-                          <span className="text-sm text-muted-foreground">
-                            Net Tutar
-                          </span>
-                          <span className="font-semibold text-lg">
-                            {request.actualPrice}
-                          </span>
+                          <span className="text-sm text-muted-foreground">Net Tutar</span>
+                          <span className="font-semibold text-lg">{request.actualPrice}</span>
                         </div>
                       </>
                     )}
@@ -297,11 +318,7 @@ export function RequestDetail({ request, open, onClose }: RequestDetailProps) {
               )}
 
               {request.status === "in_progress" && (
-                <Button
-                  variant="outline"
-                  className="w-full"
-                  onClick={handleMarkComplete}
-                >
+                <Button variant="outline" className="w-full" onClick={handleMarkComplete}>
                   Tamamlandı Olarak İşaretle
                 </Button>
               )}
@@ -309,6 +326,18 @@ export function RequestDetail({ request, open, onClose }: RequestDetailProps) {
           </Tabs>
         </div>
       </DialogContent>
+
+      {/* Rating Dialog */}
+      <RateRequestDialog
+        requestId={request?.id || null}
+        businessName={request?.businessName || ""}
+        open={showRatingDialog}
+        onClose={() => setShowRatingDialog(false)}
+        onSuccess={onRequestUpdated}
+      />
+
+      {/* Invoice Dialog */}
+      <InvoiceDialog request={request} open={showInvoiceDialog} onClose={() => setShowInvoiceDialog(false)} />
     </Dialog>
   );
 }

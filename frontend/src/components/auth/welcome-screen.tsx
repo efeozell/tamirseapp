@@ -47,13 +47,7 @@ export function WelcomeScreen({ onSignup, onLogin }: WelcomeScreenProps) {
         </div>
 
         {/* Hero Image */}
-        <div className="w-full max-w-md mb-8 rounded-2xl overflow-hidden shadow-2xl">
-          <ImageWithFallback
-            src="https://images.unsplash.com/photo-1727413433599-496949ef8196?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxhdXRvJTIwcmVwYWlyJTIwbWVjaGFuaWMlMjB3b3Jrc2hvcHxlbnwxfHx8fDE3NjQ4NDMwMDJ8MA&ixlib=rb-4.1.0&q=80&w=1080"
-            alt="Auto Repair Workshop"
-            className="w-full h-64 object-cover"
-          />
-        </div>
+        <div className="w-full max-w-md mb-8 rounded-2xl overflow-hidden shadow-2xl"></div>
 
         {/* Action Buttons */}
         <div className="w-full max-w-md space-y-3 mb-8">

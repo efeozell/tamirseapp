@@ -1,15 +1,15 @@
 import { Business } from "../entity/Business.entity";
 
 export class BusinessResponseDTO {
-  id: string;
-  name: string;
-  rating: number;
-  reviewCount: number;
-  distance: string;
-  services: string[];
-  estimatedTime: string;
-  priceRange: string;
-  isOnline: boolean;
+  id?: string;
+  name?: string;
+  rating?: number;
+  reviewCount?: number;
+  distance?: string;
+  services?: string[];
+  estimatedTime?: string;
+  priceRange?: string;
+  isOnline?: boolean;
   description?: string;
   address?: string;
   phone?: string;
@@ -26,7 +26,7 @@ export class BusinessResponseDTO {
       services: business.services.split(",").map((s) => s.trim()),
       estimatedTime: "1-2 gün",
       priceRange: this.getPriceRange(business.totalEarnings),
-      isOnline: true, // TODO: Implement real-time status
+      isOnline: business.isOnline,
       description: business.description,
       address: business.businessAddress,
       phone: business.businessPhone,

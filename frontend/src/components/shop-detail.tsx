@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { Dialog, DialogContent } from "./ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "./ui/dialog";
 import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
 import { Separator } from "./ui/separator";
@@ -36,44 +36,58 @@ const serviceIcons: { [key: string]: any } = {
   "Periyodik Bakım": Clock,
 };
 
-// TODO: This mock data should be fetched from API
-// For now keeping minimal mock structure
 const getShopDetails = (shop: Shop | null) => {
   if (!shop) return null;
 
-  // Use real data from shop object when available
+  // Parse working hours from backend format
+  const parseWorkingHours = (hoursString?: string) => {
+    if (!hoursString) {
+      return {
+        weekdays: "Bilgi yok",
+        saturday: "Bilgi yok",
+        sunday: "Kapalı",
+      };
+    }
+
+    // Try to parse if it's JSON format
+    try {
+      const parsed = JSON.parse(hoursString);
+      return parsed;
+    } catch {
+      // If it's plain text, return as is
+      return {
+        weekdays: hoursString,
+        saturday: hoursString,
+        sunday: "Kapalı",
+      };
+    }
+  };
+
+  // Parse services string to array if needed
+  const servicesArray =
+    typeof shop.services === "string"
+      ? shop.services
+          .split(",")
+          .map((s) => s.trim())
+          .filter(Boolean)
+      : Array.isArray(shop.services)
+      ? shop.services
+      : [];
+
   return {
     ...shop,
-    phone: "+90 (212) 555 0100",
-    email: "info@" + shop.name.toLowerCase().replace(/\s+/g, "") + ".com",
-    address: "Atatürk Mahallesi, Cumhuriyet Caddesi No:123, İstanbul",
-    workingHours: {
-      weekdays: "09:00 - 18:00",
-      saturday: "09:00 - 14:00",
-      sunday: "Kapalı",
-    },
-    features: ["Ücretsiz Ekspertiz", "Orijinal Yedek Parça", "Garantili İşçilik", "Ücretsiz Araç Teslim-Alma"],
+    services: servicesArray,
+    phone: shop.phone || "Bilgi yok",
+    email: shop.email || "Bilgi yok",
+    address: shop.address || "Bilgi yok",
+    workingHours: parseWorkingHours(shop.workingHours),
+    features: ["Profesyonel Hizmet", "Garantili İşçilik"],
     serviceDetails: [
-      {
-        name: "Mekanik Tamir",
-        description: "Motor, şanzıman ve genel mekanik arızalar",
-        price: "₺500 - ₺5.000",
-      },
-      {
-        name: "Kaporta Tamiri",
-        description: "Çarpma, ezilme ve kaporta hasarları",
-        price: "₺1.000 - ₺15.000",
-      },
-      {
-        name: "Boya İşlemleri",
-        description: "Profesyonel boya ve cila hizmetleri",
-        price: "₺800 - ₺10.000",
-      },
-      {
-        name: "Elektrik Sistemleri",
-        description: "Elektrik arızaları ve elektronik sistemler",
-        price: "₺300 - ₺3.000",
-      },
+      { name: "Mekanik Tamir", description: "Motor ve mekanik parça tamiri" },
+      { name: "Kaporta", description: "Kaporta ve gövde onarımı" },
+      { name: "Boya", description: "Profesyonel araç boyama hizmeti" },
+      { name: "Elektrik", description: "Elektrik sistemleri ve elektronik onarım" },
+      { name: "Periyodik Bakım", description: "Düzenli araç bakım hizmeti" },
     ],
   };
 };
@@ -90,9 +104,12 @@ export function ShopDetail({ shop, open, onClose, onRequestService }: ShopDetail
         toast.error("Atölye detayları yüklenemedi");
       });
 
-      // Fetch shop reviews
+      // Fetch shop reviews (suppress 404 errors as endpoint may not exist)
       fetchShopReviews(shop.id).catch((err) => {
-        console.error("Failed to fetch shop reviews:", err);
+        // Silently handle 404 errors for reviews endpoint
+        if (err?.response?.status !== 404) {
+          console.error("Failed to fetch shop reviews:", err);
+        }
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -105,6 +122,13 @@ export function ShopDetail({ shop, open, onClose, onRequestService }: ShopDetail
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto p-0">
+        <DialogHeader className="sr-only">
+          <DialogTitle>{details.name} - İşletme Detayları</DialogTitle>
+          <DialogDescription>
+            {details.name} işletmesinin detaylı bilgileri, çalışma saatleri, hizmetler ve iletişim bilgileri
+          </DialogDescription>
+        </DialogHeader>
+
         {/* Header with Cover */}
         <div className="relative h-48 bg-gradient-to-br from-primary to-primary/70 p-6 flex items-end">
           <div className="text-white">

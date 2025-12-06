@@ -12,11 +12,13 @@ import { RequestForm } from "./components/request-form";
 import { ShopDetail } from "./components/shop-detail";
 import { RequestCard } from "./components/customer/request-card";
 import { RequestDetail } from "./components/customer/request-detail";
+import { CustomerSettings } from "./components/customer/customer-settings";
 
 // Business Components
 import { Dashboard } from "./components/business/dashboard";
 import { RequestList } from "./components/business/request-list";
 import { RequestManagement } from "./components/business/request-management";
+import { BusinessSettings } from "./components/business/business-settings";
 
 // Shared Components
 import { Button } from "./components/ui/button";
@@ -34,6 +36,7 @@ import { useAuthStore } from "./store/auth-store";
 import { useRequestStore } from "./store/request-store";
 import { useNotificationStore } from "./store/notification-store";
 import { useShopStore } from "./store/shop-store";
+import { useBusinessStatsStore } from "./store/business-stats-store";
 
 type AuthScreen = "welcome" | "signup" | "login";
 type UserType = "customer" | "business" | null;
@@ -67,11 +70,17 @@ export default function App() {
   } = useRequestStore();
   const { notifications, unreadCount, fetchNotifications, markAsRead, markAllAsRead } = useNotificationStore();
   const { selectedShop, setSelectedShop } = useShopStore();
+  const { stats: businessStats, fetchBusinessStats } = useBusinessStatsStore();
   const [selectedBusinessRequest, setSelectedBusinessRequest] = useState<ServiceRequest | null>(null);
 
   // Check authentication on mount
   useEffect(() => {
-    checkAuth().catch((err) => console.error("Auth check failed:", err));
+    checkAuth().catch((err) => {
+      // Suppress error logging for 401 (expected when not logged in)
+      if (err?.status !== 401) {
+        console.error("Auth check failed:", err);
+      }
+    });
   }, [checkAuth]);
 
   // Load data on mount if authenticated
@@ -79,8 +88,13 @@ export default function App() {
     if (isAuthenticated) {
       fetchRequests().catch((err) => console.error("Failed to fetch requests:", err));
       fetchNotifications().catch((err) => console.error("Failed to fetch notifications:", err));
+
+      // Fetch business stats if user is business type
+      if (user?.type === "business" && user?.business?.id) {
+        fetchBusinessStats(user.business.id).catch((err) => console.error("Failed to fetch business stats:", err));
+      }
     }
-  }, [isAuthenticated, fetchRequests, fetchNotifications]);
+  }, [isAuthenticated, user?.type, user?.business, fetchRequests, fetchNotifications, fetchBusinessStats]);
 
   // Auth Handlers
   const handleLoginSuccess = async (email: string, password: string, type: "customer" | "business") => {
@@ -314,40 +328,38 @@ export default function App() {
           )}
 
           {customerPage === "history" && (
-            <div className="text-center py-12">
-              <History className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
-              <h2 className="text-xl font-semibold mb-2">Geçmiş İşlemler</h2>
-              <p className="text-muted-foreground">Tamamlanmış işlemlerinizi burada görebilirsiniz</p>
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <h1 className="text-3xl font-bold">Geçmiş İşlemler</h1>
+              </div>
+
+              {requests.filter((r) => r.status === "completed" || r.status === "rejected").length === 0 ? (
+                <div className="text-center py-12">
+                  <History className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
+                  <h2 className="text-xl font-semibold mb-2">Henüz Geçmiş İşlem Yok</h2>
+                  <p className="text-muted-foreground">
+                    Tamamlanmış veya iptal edilmiş taleplerini burada görebilirsiniz
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {requests
+                    .filter((r) => r.status === "completed" || r.status === "rejected")
+                    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+                    .map((request) => (
+                      <RequestCard
+                        key={request.id}
+                        request={request}
+                        onClick={() => setSelectedCustomerRequest(request)}
+                      />
+                    ))}
+                </div>
+              )}
             </div>
           )}
 
-          {customerPage === "profile" && (
-            <div className="max-w-2xl mx-auto">
-              <div className="bg-card border border-border rounded-lg p-6">
-                <div className="flex items-center gap-4 mb-6">
-                  <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center">
-                    <User className="w-10 h-10 text-primary" />
-                  </div>
-                  <div>
-                    <h2 className="text-xl font-semibold">Ahmet Yılmaz</h2>
-                    <p className="text-muted-foreground">ahmet@example.com</p>
-                  </div>
-                </div>
-                <div className="space-y-4">
-                  <div className="p-4 bg-muted/30 rounded-lg">
-                    <p className="text-sm text-muted-foreground">Kayıtlı Araçlar</p>
-                    <p className="font-medium">3 araç</p>
-                  </div>
-                  <div className="p-4 bg-muted/30 rounded-lg">
-                    <p className="text-sm text-muted-foreground">Toplam Talep</p>
-                    <p className="font-medium">{requests.length} adet</p>
-                  </div>
-                  <Button variant="outline" className="w-full" onClick={handleLogout}>
-                    Çıkış Yap
-                  </Button>
-                </div>
-              </div>
-            </div>
+          {customerPage === "profile" && user && (
+            <CustomerSettings user={user} onLogout={handleLogout} onUpdate={checkAuth} />
           )}
         </main>
 
@@ -400,6 +412,9 @@ export default function App() {
             setShowCustomerRequestDetail(false);
             setSelectedCustomerRequest(null);
           }}
+          onRequestUpdated={() => {
+            fetchRequests().catch((err) => console.error(err));
+          }}
         />
       </div>
     );
@@ -414,12 +429,18 @@ export default function App() {
     ];
 
     const dashboardStats = {
-      todayRequests: requests.length,
-      pendingApproval: requests.filter((r) => r.status === "pending").length,
-      inProgress: requests.filter((r) => r.status === "in_progress").length,
-      completedToday: requests.filter((r) => r.status === "completed").length,
-      rejectedToday: requests.filter((r) => r.status === "rejected").length,
-      totalRevenue: "₺12.450",
+      todayRequests: businessStats?.todayRequests || 0,
+      pendingApproval: businessStats?.pendingApproval || 0,
+      inProgress: businessStats?.inProgress || 0,
+      completedToday: businessStats?.completedToday || 0,
+      rejectedToday: businessStats?.rejectedToday || 0,
+      totalRevenue: businessStats?.todayEarnings
+        ? `₺${businessStats.todayEarnings.toLocaleString("tr-TR")}`
+        : undefined,
+      totalEarnings: businessStats?.totalEarnings,
+      completedRequests: businessStats?.completedRequests,
+      activeRequests: businessStats?.activeRequests,
+      averageRating: businessStats?.averageRating,
     };
 
     return (
@@ -467,25 +488,8 @@ export default function App() {
             />
           )}
 
-          {businessPage === "settings" && (
-            <div className="max-w-2xl mx-auto">
-              <div className="bg-card border border-border rounded-lg p-6">
-                <h2 className="text-2xl font-semibold mb-6">İşletme Ayarları</h2>
-                <div className="space-y-4">
-                  <div className="p-4 bg-muted/30 rounded-lg">
-                    <p className="text-sm text-muted-foreground">İşletme Adı</p>
-                    <p className="font-medium">ProTech Oto Tamir</p>
-                  </div>
-                  <div className="p-4 bg-muted/30 rounded-lg">
-                    <p className="text-sm text-muted-foreground">Çalışma Saatleri</p>
-                    <p className="font-medium">Hafta İçi: 09:00 - 18:00</p>
-                  </div>
-                  <Button variant="outline" className="w-full" onClick={handleLogout}>
-                    Çıkış Yap
-                  </Button>
-                </div>
-              </div>
-            </div>
+          {businessPage === "settings" && user && (
+            <BusinessSettings user={user} onLogout={handleLogout} onUpdate={checkAuth} />
           )}
         </main>
 
