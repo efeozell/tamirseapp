@@ -35,6 +35,15 @@ export class ServiceRequest {
   @Column()
   urgency!: "low" | "medium" | "high";
 
+  // Araç bilgileri
+  @Column("simple-json", { nullable: true })
+  vehicle?: {
+    brand: string;
+    model: string;
+    year: string;
+    mileage?: string;
+  };
+
   @Column({
     type: "varchar",
     default: "pending",

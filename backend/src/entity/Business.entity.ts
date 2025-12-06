@@ -36,6 +36,9 @@ export class Business {
   @Column("float", { default: 0 })
   averageRating!: number;
 
+  @Column({ nullable: true })
+  estimatedDeliveryTime?: string;
+
   @Column({ default: true })
   isOnline!: boolean;
 
