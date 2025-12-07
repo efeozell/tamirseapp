@@ -22,8 +22,8 @@ interface DashboardStats {
   completedRequests?: number;
   activeRequests?: number;
   averageRating?: number;
-  monthlyRevenue?: number;
-  weeklyRevenue?: number;
+  averageServiceTime?: number;
+  repeatCustomerPercentage?: number;
 }
 
 interface DashboardProps {
@@ -106,12 +106,12 @@ export function Dashboard({ stats }: DashboardProps) {
           </div>
           <div className="space-y-1 text-sm">
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Bu Ay:</span>
-              <span className="font-medium">₺{stats.monthlyRevenue?.toLocaleString() || 0}</span>
+              <span className="text-muted-foreground">Bugün:</span>
+              <span className="font-medium">{stats.totalRevenue || "₺0"}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Bu Hafta:</span>
-              <span className="font-medium">₺{stats.weeklyRevenue?.toLocaleString() || 0}</span>
+              <span className="text-muted-foreground">Tamamlanan:</span>
+              <span className="font-medium">{stats.completedRequests || 0} iş</span>
             </div>
           </div>
         </Card>
@@ -218,7 +218,9 @@ export function Dashboard({ stats }: DashboardProps) {
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <span className="text-sm text-muted-foreground">Ortalama İş Süresi</span>
-              <span className="font-medium">2.5 gün</span>
+              <span className="font-medium">
+                {stats.averageServiceTime ? `${stats.averageServiceTime} gün` : "Veri yok"}
+              </span>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-sm text-muted-foreground">Müşteri Memnuniyeti</span>
@@ -226,7 +228,9 @@ export function Dashboard({ stats }: DashboardProps) {
             </div>
             <div className="flex items-center justify-between">
               <span className="text-sm text-muted-foreground">Tekrar Eden Müşteri</span>
-              <span className="font-medium">45%</span>
+              <span className="font-medium">
+                {stats.repeatCustomerPercentage !== undefined ? `${stats.repeatCustomerPercentage}%` : "Veri yok"}
+              </span>
             </div>
           </div>
         </Card>

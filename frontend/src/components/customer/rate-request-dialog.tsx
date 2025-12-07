@@ -38,7 +38,7 @@ export function RateRequestDialog({ requestId, businessName, open, onClose, onSu
     try {
       await apiClient.post(API_ENDPOINTS.RATE_REQUEST(requestId), {
         rating,
-        comment: comment.trim() || undefined,
+        review: comment.trim() || undefined,
       });
 
       toast.success("Değerlendirmeniz kaydedildi");

@@ -18,6 +18,10 @@ interface BusinessStats {
   // Status counts
   pendingApproval: number;
   inProgress: number;
+
+  // Advanced stats
+  averageServiceTime: number;
+  repeatCustomerPercentage: number;
 }
 
 interface BusinessStatsState {

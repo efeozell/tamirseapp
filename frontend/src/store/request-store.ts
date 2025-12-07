@@ -63,6 +63,8 @@ export const useRequestStore = create<RequestState>((set, get) => ({
         price: req.price,
         rating: req.rating,
         comment: req.comment,
+        review: req.review,
+        businessNotes: req.businessNotes,
         messages:
           req.messages?.map((msg: any) => ({
             ...msg,
@@ -113,6 +115,8 @@ export const useRequestStore = create<RequestState>((set, get) => ({
         price: req.price,
         rating: req.rating,
         comment: req.comment,
+        review: req.review,
+        businessNotes: req.businessNotes,
         messages:
           req.messages?.map((msg: any) => ({
             ...msg,

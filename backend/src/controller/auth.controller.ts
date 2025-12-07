@@ -116,10 +116,17 @@ export class Auth {
         this.tokenService.setCookies(res, accessToken, refreshToken);
 
         // Şifre olmadan user bilgisini döndür
-        const { password: _, ...userWithoutPassword } = user;
+        const { password: _, business, ...userWithoutPassword } = user;
+
+        // Business array'ini tek object'e çevir (frontend için)
+        const userResponse = {
+          ...userWithoutPassword,
+          business: business && business.length > 0 ? business[0] : undefined,
+        };
+
         return res.status(200).json({
           message: "Login successful",
-          user: userWithoutPassword,
+          user: userResponse,
         });
       }
 
@@ -173,8 +180,15 @@ export class Auth {
       }
 
       // Şifre olmadan kullanıcı bilgilerini döndür
-      const { password, ...userWithoutPassword } = user;
-      return res.status(200).json(userWithoutPassword);
+      const { password, business, ...userWithoutPassword } = user;
+
+      // Business array'ini tek object'e çevir (frontend için)
+      const userResponse = {
+        ...userWithoutPassword,
+        business: business && business.length > 0 ? business[0] : undefined,
+      };
+
+      return res.status(200).json(userResponse);
     } catch (error) {
       console.log("Error in me: ", error);
       return res.status(500).json({ message: "Internal server error" });

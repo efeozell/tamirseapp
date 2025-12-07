@@ -134,6 +134,41 @@ export class BusinessController {
         },
       });
 
+      // Get all completed requests for calculating averages
+      const allCompletedRequests = await this.serviceRequestRepo.find({
+        where: {
+          businessId: id,
+          status: "completed",
+        },
+        relations: ["customer"],
+      });
+
+      // Calculate average service time (days)
+      let averageServiceTime = 0;
+      if (allCompletedRequests.length > 0) {
+        const totalDays = allCompletedRequests.reduce((sum, req) => {
+          if (req.completedAt && req.createdAt) {
+            const diffTime = Math.abs(new Date(req.completedAt).getTime() - new Date(req.createdAt).getTime());
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            return sum + diffDays;
+          }
+          return sum;
+        }, 0);
+        averageServiceTime = totalDays / allCompletedRequests.length;
+      }
+
+      // Calculate repeat customer percentage
+      let repeatCustomerPercentage = 0;
+      if (allCompletedRequests.length > 0) {
+        const customerCounts = new Map<string, number>();
+        allCompletedRequests.forEach((req) => {
+          const count = customerCounts.get(req.customerId) || 0;
+          customerCounts.set(req.customerId, count + 1);
+        });
+        const repeatCustomers = Array.from(customerCounts.values()).filter((count) => count > 1).length;
+        repeatCustomerPercentage = (repeatCustomers / customerCounts.size) * 100;
+      }
+
       const response = {
         // Overall stats
         totalEarnings: business.totalEarnings || 0,
@@ -150,7 +185,19 @@ export class BusinessController {
         // Status counts
         pendingApproval,
         inProgress,
+
+        // Advanced stats
+        averageServiceTime: parseFloat(averageServiceTime.toFixed(1)),
+        repeatCustomerPercentage: parseFloat(repeatCustomerPercentage.toFixed(0)),
       };
+
+      console.log(`[STATS] Business ${id} stats:`, {
+        totalEarnings: response.totalEarnings,
+        completedRequests: response.completedRequests,
+        activeRequests: response.activeRequests,
+        todayEarnings: response.todayEarnings,
+        completedToday: response.completedToday,
+      });
 
       res.status(200).json(response);
     } catch (error) {

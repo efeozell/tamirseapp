@@ -92,6 +92,8 @@ export default function App() {
       // Fetch business stats if user is business type
       if (user?.type === "business" && user?.business?.id) {
         fetchBusinessStats(user.business.id).catch((err) => console.error("Failed to fetch business stats:", err));
+      } else if (user?.type === "business") {
+        console.warn("[APP] User is business but no business.id found!");
       }
     }
   }, [isAuthenticated, user?.type, user?.business, fetchRequests, fetchNotifications, fetchBusinessStats]);
@@ -441,6 +443,8 @@ export default function App() {
       completedRequests: businessStats?.completedRequests,
       activeRequests: businessStats?.activeRequests,
       averageRating: businessStats?.averageRating,
+      averageServiceTime: businessStats?.averageServiceTime,
+      repeatCustomerPercentage: businessStats?.repeatCustomerPercentage,
     };
 
     return (
@@ -526,7 +530,15 @@ export default function App() {
             setShowBusinessRequestManagement(false);
             setSelectedBusinessRequest(null);
           }}
-          onUpdateStatus={updateRequestStatus}
+          onUpdateStatus={async (requestId, status, note, price) => {
+            await updateRequestStatus(requestId, status, note, price);
+            // Refresh stats after status update
+            if (user?.business?.id) {
+              fetchBusinessStats(user.business.id).catch((err) => console.error(err));
+            }
+            // Refresh requests list
+            fetchRequests().catch((err) => console.error(err));
+          }}
           onSendMessage={addMessage}
         />
       </div>

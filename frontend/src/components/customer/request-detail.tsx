@@ -103,6 +103,19 @@ export function RequestDetail({ request, open, onClose, onRequestUpdated }: Requ
             <TabsContent value="timeline" className="space-y-6">
               <RequestTimeline currentStatus={request.status} timeline={request.timeline} />
 
+              {/* Business Notes */}
+              {request.businessNotes && (
+                <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                  <div className="flex items-start gap-3">
+                    <FileText className="w-5 h-5 text-blue-600 mt-0.5" />
+                    <div className="flex-1">
+                      <h4 className="font-medium text-blue-900 mb-1">Atölye Notu</h4>
+                      <p className="text-sm text-blue-700 whitespace-pre-wrap">{request.businessNotes}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {request.status === "completed" && (
                 <div className="space-y-3">
                   <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
@@ -125,18 +138,27 @@ export function RequestDetail({ request, open, onClose, onRequestUpdated }: Requ
                             </Button>
                           )}
                           {request.rating && (
-                            <div className="flex items-center gap-2">
-                              <div className="flex">
-                                {[1, 2, 3, 4, 5].map((star) => (
-                                  <Star
-                                    key={star}
-                                    className={`w-4 h-4 ${
-                                      star <= request.rating! ? "fill-yellow-400 text-yellow-400" : "text-gray-300"
-                                    }`}
-                                  />
-                                ))}
+                            <div className="w-full">
+                              <div className="flex items-center gap-2 mb-2">
+                                <div className="flex">
+                                  {[1, 2, 3, 4, 5].map((star) => (
+                                    <Star
+                                      key={star}
+                                      className={`w-4 h-4 ${
+                                        star <= request.rating! ? "fill-yellow-400 text-yellow-400" : "text-gray-300"
+                                      }`}
+                                    />
+                                  ))}
+                                </div>
+                                <span className="text-sm font-medium text-green-700">
+                                  {request.rating}.0 - Değerlendirmeniz
+                                </span>
                               </div>
-                              <span className="text-sm text-green-700">Değerlendirmeniz kaydedildi</span>
+                              {request.review && (
+                                <div className="mt-2 p-3 bg-white/50 rounded-lg border border-green-200">
+                                  <p className="text-sm text-gray-700 italic">"{request.review}"</p>
+                                </div>
+                              )}
                             </div>
                           )}
                           <Button

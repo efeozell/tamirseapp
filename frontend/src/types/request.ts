@@ -39,6 +39,8 @@ export interface ServiceRequest {
   price?: number;
   rating?: number;
   comment?: string;
+  review?: string;
+  businessNotes?: string;
   messages: RequestMessage[];
   timeline: {
     status: RequestStatus;

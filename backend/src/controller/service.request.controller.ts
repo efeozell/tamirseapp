@@ -168,36 +168,63 @@ class ServiceRequestController {
         return res.status(403).json({ message: "You are not authorized to update this request" });
       }
 
-      if (data.status !== undefined) {
-        serviceRequest.status = data.status;
+      // Update price first if provided
+      if (data.price !== undefined) {
+        serviceRequest.price = data.price;
       }
-      serviceRequest.statusHistory?.push({
-        status: data.status!,
-        note: data.note,
-        timestamp: new Date(),
-        updatedBy: "business",
-      });
-      if (data.status === "approved") {
-        serviceRequest.business.activeRequests += 1;
-        await this.businessRepo.save(serviceRequest.business);
-      } else if (data.status === "completed") {
-        serviceRequest.completedAt = new Date();
-        serviceRequest.business.activeRequests -= 1;
-        serviceRequest.business.completedRequests += 1;
 
-        // Update totalEarnings if price is set
-        if (data.price !== undefined) {
-          serviceRequest.business.totalEarnings = (serviceRequest.business.totalEarnings || 0) + data.price;
-        } else if (serviceRequest.price) {
-          serviceRequest.business.totalEarnings = (serviceRequest.business.totalEarnings || 0) + serviceRequest.price;
+      // Update status and business stats
+      if (data.status !== undefined && data.status !== serviceRequest.status) {
+        const oldStatus = serviceRequest.status;
+        serviceRequest.status = data.status;
+
+        // Add to status history
+        if (!serviceRequest.statusHistory) {
+          serviceRequest.statusHistory = [];
+        }
+        serviceRequest.statusHistory.push({
+          status: data.status,
+          note: data.note,
+          timestamp: new Date(),
+          updatedBy: "business",
+        });
+
+        // Update business stats based on status change
+        if (data.status === "approved" && oldStatus === "pending") {
+          serviceRequest.business.activeRequests += 1;
+          console.log(
+            `[STATUS UPDATE] Approved request ${id}. Active requests: ${serviceRequest.business.activeRequests}`
+          );
+        } else if (data.status === "completed") {
+          serviceRequest.completedAt = new Date();
+
+          // Decrease active requests if it was active
+          if (oldStatus === "approved" || oldStatus === "in_progress") {
+            serviceRequest.business.activeRequests = Math.max(0, serviceRequest.business.activeRequests - 1);
+          }
+
+          serviceRequest.business.completedRequests += 1;
+
+          // Update totalEarnings if price is set
+          const priceToAdd = serviceRequest.price || 0;
+          serviceRequest.business.totalEarnings = (serviceRequest.business.totalEarnings || 0) + priceToAdd;
+
+          console.log(`[STATUS UPDATE] Completed request ${id}`);
+          console.log(`  - Price: ${priceToAdd}`);
+          console.log(`  - Total Earnings: ${serviceRequest.business.totalEarnings}`);
+          console.log(`  - Completed Requests: ${serviceRequest.business.completedRequests}`);
+          console.log(`  - Active Requests: ${serviceRequest.business.activeRequests}`);
         }
 
+        // Save business updates
         await this.businessRepo.save(serviceRequest.business);
       }
-      serviceRequest.status = data.status ?? serviceRequest.status;
-      serviceRequest.price = data.price ?? serviceRequest.price;
+
+      // Update other fields
       serviceRequest.businessNotes = data.note ?? serviceRequest.businessNotes;
       serviceRequest.estimatedCompletionDate = data.estimatedCompletionDate ?? serviceRequest.estimatedCompletionDate;
+
+      // Save service request
       await this.serviceRequestRepo.save(serviceRequest);
 
       return res.status(200).json(serviceRequest);
@@ -332,17 +359,30 @@ class ServiceRequestController {
         return res.status(403).json({ message: "You are not authorized to update this request" });
       }
 
-      serviceRequest.statusHistory?.push({
+      if (!serviceRequest.statusHistory) {
+        serviceRequest.statusHistory = [];
+      }
+      serviceRequest.statusHistory.push({
         status: "completed",
         note: businessNotes,
         timestamp: new Date(),
         updatedBy: "business",
       });
+
       serviceRequest.status = "completed";
-      serviceRequest.business.activeRequests -= 1;
+      serviceRequest.business.activeRequests = Math.max(0, serviceRequest.business.activeRequests - 1);
       serviceRequest.business.completedRequests += 1;
       serviceRequest.completedAt = new Date();
       serviceRequest.businessNotes = businessNotes ?? serviceRequest.businessNotes;
+
+      // Update totalEarnings if price is set
+      if (serviceRequest.price) {
+        serviceRequest.business.totalEarnings = (serviceRequest.business.totalEarnings || 0) + serviceRequest.price;
+        console.log(`[COMPLETED] Request ${id} completed with price ${serviceRequest.price}`);
+        console.log(`  - Total Earnings: ${serviceRequest.business.totalEarnings}`);
+        console.log(`  - Completed Requests: ${serviceRequest.business.completedRequests}`);
+      }
+
       await this.serviceRequestRepo.save(serviceRequest);
       await this.businessRepo.save(serviceRequest.business);
 
@@ -357,7 +397,10 @@ class ServiceRequestController {
     try {
       const { id } = req.params;
       const { rating, review } = req.body;
-      const serviceRequest = await this.serviceRequestRepo.findOne({ where: { id } });
+      const serviceRequest = await this.serviceRequestRepo.findOne({
+        where: { id },
+        relations: ["business"],
+      });
       if (!serviceRequest) {
         return res.status(404).json({ message: "Request not found" });
       }
@@ -373,6 +416,28 @@ class ServiceRequestController {
       serviceRequest.rating = rating;
       serviceRequest.review = review;
       await this.serviceRequestRepo.save(serviceRequest);
+
+      // Update business average rating
+      if (serviceRequest.business) {
+        const allRatedRequests = await this.serviceRequestRepo.find({
+          where: {
+            businessId: serviceRequest.businessId,
+            status: "completed",
+          },
+          select: ["rating"],
+        });
+
+        const ratings = allRatedRequests
+          .filter((r) => r.rating !== null && r.rating !== undefined)
+          .map((r) => r.rating!);
+
+        if (ratings.length > 0) {
+          const averageRating = ratings.reduce((sum, r) => sum + r, 0) / ratings.length;
+          serviceRequest.business.averageRating = parseFloat(averageRating.toFixed(2));
+          await this.businessRepo.save(serviceRequest.business);
+        }
+      }
+
       return res.status(200).json(serviceRequest);
     } catch (error) {
       console.log("Error in rageRequestById: ", error);
