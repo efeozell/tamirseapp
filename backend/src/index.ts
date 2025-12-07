@@ -38,7 +38,7 @@ function startServer() {
   }
 
   // CORS configuration
-  const allowedOrigins = ["http://localhost:3000", ENV.FRONTEND_URL].filter(Boolean);
+  const allowedOrigins = ["http://localhost:3000", "https://tamirseapp.vercel.app", ENV.FRONTEND_URL].filter(Boolean);
 
   app.use(
     cors({
@@ -49,6 +49,7 @@ function startServer() {
         if (allowedOrigins.includes(origin)) {
           callback(null, true);
         } else {
+          console.log("❌ CORS blocked origin:", origin);
           callback(new Error("Not allowed by CORS"));
         }
       },
