@@ -80,6 +80,20 @@ export class Auth {
 
       await this.userRepository.save(newUser);
 
+      // Email bildirimi (şimdilik console log - production'da email service eklenecek)
+      console.log(`
+🔔 YENİ İŞLETME KAYIT TALEBİ
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+İşletme Adı: ${businessDetails.businessName}
+Yetkili: ${name}
+Email: ${email}
+Telefon: ${phone}
+Adres: ${businessDetails.businessAddress}
+Hizmetler: ${businessDetails.services?.join(", ") || "Belirtilmemiş"}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Onaylamak için admin panelinden işlem yapın.
+      `);
+
       return res.status(201).json({
         message: "Business account request submitted successfully. You will be notified once approved.",
       });

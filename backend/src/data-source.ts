@@ -10,3 +10,5 @@ export const AppDataSource = new DataSource({
   migrations: ["src/migration/**/*.ts"],
   subscribers: ["src/subscriber/**/*.ts"],
 });
+
+//TODO: Production'da surekli olarak unauthorized hatasi cozlecek
