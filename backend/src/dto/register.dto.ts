@@ -2,16 +2,16 @@ import { IsEmail, IsNotEmpty, IsString, Max, MaxLength, Min, MinLength } from "c
 
 export class RegisterDto {
   @IsEmail()
-  email: string;
+  email!: string;
 
   @IsString()
   @MinLength(3)
   @MaxLength(20)
-  name: string;
+  name!: string;
 
   @IsString()
   @MinLength(6)
   @MaxLength(20)
   @IsNotEmpty()
-  password: string;
+  password!: string;
 }

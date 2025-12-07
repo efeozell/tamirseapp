@@ -3,20 +3,20 @@ import { IsNotEmpty, IsNumber, IsOptional } from "class-validator";
 export class ServiceRequestDTO {
   @IsNotEmpty()
   @IsNumber()
-  bussinessId: number;
+  bussinessId!: number;
 
   @IsNotEmpty()
-  title: string;
+  title!: string;
 
   @IsNotEmpty()
-  description: string;
+  description!: string;
 
   @IsNotEmpty()
-  category: string;
+  category!: string;
 
   @IsOptional()
-  urgency: string;
+  urgency!: string;
 
   @IsOptional()
-  images: string[];
+  images!: string[];
 }
