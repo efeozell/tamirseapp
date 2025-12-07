@@ -81,6 +81,10 @@ export class Auth {
       await this.userRepository.save(newUser);
 
       // Email bildirimi (şimdilik console log - production'da email service eklenecek)
+      const servicesDisplay = Array.isArray(businessDetails.services)
+        ? businessDetails.services.join(", ")
+        : businessDetails.services || "Belirtilmemiş";
+
       console.log(`
 🔔 YENİ İŞLETME KAYIT TALEBİ
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -89,7 +93,7 @@ Yetkili: ${name}
 Email: ${email}
 Telefon: ${phone}
 Adres: ${businessDetails.businessAddress}
-Hizmetler: ${businessDetails.services?.join(", ") || "Belirtilmemiş"}
+Hizmetler: ${servicesDisplay}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Onaylamak için admin panelinden işlem yapın.
       `);
