@@ -9,7 +9,16 @@ export class AuthMiddleware {
   constructor(private tokenService = new TokenService(), private readonly userRepo: Repository<User>) {}
 
   protectRoute = async (req: any, res: any, next: any) => {
-    const accessToken = req.cookies.accessToken;
+    // Try cookie first, then Authorization header (mobile fallback)
+    let accessToken = req.cookies.accessToken;
+
+    if (!accessToken) {
+      const authHeader = req.headers.authorization;
+      if (authHeader && authHeader.startsWith("Bearer ")) {
+        accessToken = authHeader.substring(7);
+      }
+    }
+
     if (!accessToken) {
       return res.status(401).json({ message: "Unauthorized" });
     }

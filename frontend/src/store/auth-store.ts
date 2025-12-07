@@ -65,13 +65,23 @@ export const useAuthStore = create<AuthState>()(
       login: async (email: string, password: string) => {
         set({ isLoading: true });
         try {
-          // POST /auth/login - Cookie-based auth (token in httpOnly cookie)
-          const response = await apiClient.post<{ message: string; user?: User }>(API_ENDPOINTS.LOGIN, {
+          // POST /auth/login - Cookie-based auth with localStorage fallback for mobile
+          const response = await apiClient.post<{
+            message: string;
+            user?: User;
+            tokens?: { accessToken: string; refreshToken: string };
+          }>(API_ENDPOINTS.LOGIN, {
             email,
             password,
           });
 
-          // Token artık cookie'de, kullanıcı bilgisini al
+          // Mobile fallback: Store tokens in localStorage if provided
+          if (response.tokens) {
+            localStorage.setItem("accessToken", response.tokens.accessToken);
+            localStorage.setItem("refreshToken", response.tokens.refreshToken);
+          }
+
+          // Token artık cookie'de veya localStorage'da, kullanıcı bilgisini al
           if (response.user) {
             set({ user: response.user, isAuthenticated: true, isLoading: false });
           } else {
@@ -111,11 +121,14 @@ export const useAuthStore = create<AuthState>()(
 
       logout: async () => {
         try {
-          // TODO: POST /auth/logout
+          // POST /auth/logout
           await apiClient.post(API_ENDPOINTS.LOGOUT);
         } catch (error) {
           console.error("Logout error:", error);
         } finally {
+          // Clear localStorage tokens (mobile fallback)
+          localStorage.removeItem("accessToken");
+          localStorage.removeItem("refreshToken");
           set({ user: null, isAuthenticated: false });
         }
       },

@@ -18,6 +18,12 @@ class ApiClient {
       "Content-Type": "application/json",
     };
 
+    // Mobile fallback: Add Authorization header if token exists in localStorage
+    const accessToken = localStorage.getItem("accessToken");
+    if (accessToken) {
+      headers["Authorization"] = `Bearer ${accessToken}`;
+    }
+
     // Merge custom headers
     if (options.headers) {
       Object.assign(headers, options.headers);

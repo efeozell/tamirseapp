@@ -145,6 +145,7 @@ Onaylamak için admin panelinden işlem yapın.
         return res.status(200).json({
           message: "Login successful",
           user: userResponse,
+          tokens: { accessToken, refreshToken }, // Mobile fallback
         });
       }
 

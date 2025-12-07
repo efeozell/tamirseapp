@@ -24,17 +24,21 @@ export class TokenService {
   setCookies = (res: any, accessToken: string, refreshToken: string) => {
     const isProduction = ENV.NODE_ENV === "production";
 
-    res.cookie("accessToken", accessToken, {
+    // Cookie options for cross-site contexts (Safari/mobile compatibility)
+    const cookieOptions = {
       httpOnly: true,
       secure: isProduction,
-      sameSite: isProduction ? "none" : "lax",
+      sameSite: isProduction ? ("none" as const) : ("lax" as const),
+      partitioned: isProduction, // CHIPS for Safari cross-site cookies
+    };
+
+    res.cookie("accessToken", accessToken, {
+      ...cookieOptions,
       maxAge: 15 * 60 * 1000, // 15 minutes
     });
 
     res.cookie("refreshToken", refreshToken, {
-      httpOnly: true,
-      secure: isProduction,
-      sameSite: isProduction ? "none" : "lax",
+      ...cookieOptions,
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     });
   };
