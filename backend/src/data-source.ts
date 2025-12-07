@@ -4,7 +4,7 @@ export const AppDataSource = new DataSource({
   type: "postgres",
   url: process.env.DATABASE_URL, // Railway's full connection string
   ssl: process.env.NODE_ENV === "production" ? { rejectUnauthorized: false } : false,
-  synchronize: true, // Auto-create tables (set to false after first deploy)
+  synchronize: false, // Auto-create tables (set to false after first deploy)
   logging: process.env.NODE_ENV === "development",
   entities: [__dirname + "/**/*.entity{.ts,.js}"],
   migrations: ["src/migration/**/*.ts"],
