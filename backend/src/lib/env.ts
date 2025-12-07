@@ -10,4 +10,5 @@ export const ENV = {
   REFRESH_TOKEN_SECRET: process.env.REFRESH_TOKEN_SECRET,
   NODE_ENV: process.env.NODE_ENV || "development",
   REDIS_PASSWORD: process.env.REDIS_PASSWORD || "",
+  FRONTEND_URL: process.env.FRONTEND_URL || "http://localhost:3000",
 };
